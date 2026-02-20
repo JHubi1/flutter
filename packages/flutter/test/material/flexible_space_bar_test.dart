@@ -782,6 +782,7 @@ void main() {
                     stretch: true,
                     flexibleSpace: FlexibleSpaceBar(
                       titlePadding: EdgeInsets.zero,
+                      expandedTitlePadding: EdgeInsets.zero,
                       title: Text(
                         'X' * 2000,
                         maxLines: 1,
@@ -835,6 +836,7 @@ void main() {
                     stretch: true,
                     flexibleSpace: FlexibleSpaceBar(
                       titlePadding: EdgeInsets.zero,
+                      expandedTitlePadding: EdgeInsets.zero,
                       title: Text(
                         'X' * 2000,
                         maxLines: 1,
@@ -884,6 +886,7 @@ void main() {
                   flexibleSpace: FlexibleSpaceBar(
                     expandedTitleScale: expandedTitleScale,
                     titlePadding: EdgeInsets.zero,
+                    expandedTitlePadding: EdgeInsets.zero,
                     title: Text(
                       'X' * 41,
                       maxLines: 1,
@@ -954,6 +957,7 @@ void main() {
                   flexibleSpace: FlexibleSpaceBar(
                     expandedTitleScale: expandedTitleScale,
                     titlePadding: EdgeInsets.zero,
+                    expandedTitlePadding: EdgeInsets.zero,
                     title: Text(
                       'X' * 41,
                       maxLines: 1,

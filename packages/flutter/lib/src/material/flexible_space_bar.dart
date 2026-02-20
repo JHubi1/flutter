@@ -138,22 +138,21 @@ class FlexibleSpaceBar extends StatefulWidget {
   /// If null, defaults to [Curves.linear].
   final Curve? titleCurve;
 
-  /// Defines how far the [title] is inset from either the widget's
-  /// bottom-left or its center.
+  /// Defines how far the [title] is inset from either the widget's bottom-left
+  /// or its center.
   ///
   /// {@template flutter.material.FlexibleSpaceBar.titlePadding}
-  /// Typically this property is used to adjust how far the title is
-  /// inset from the bottom-left and it is specified along with
-  /// [centerTitle] false.
+  /// Typically this property is used to adjust how far the title is inset from
+  /// the bottom-left if it is specified along with [centerTitle] false.
   ///
-  /// If [centerTitle] is true, then the title is centered within the
-  /// flexible space bar with a bottom padding of 16.0 pixels.
+  /// If [centerTitle] is true, then the title is centered within the flexible
+  /// space bar with a bottom padding of 16.0 pixels.
   /// {@endtemplate}
   ///
-  /// If [centerTitle] is false and [FlexibleSpaceBarSettings.hasLeading] is true,
-  /// then the title is aligned to the start of the flexible space bar with the
-  /// [titlePadding] applied. If [titlePadding] is null, then defaults to start
-  /// padding of 72.0 pixels and bottom padding of 16.0 pixels.
+  /// If [centerTitle] is false and [FlexibleSpaceBarSettings.hasLeading] is
+  /// true, then the title is aligned to the start of the flexible space bar
+  /// with the [titlePadding] applied. If [titlePadding] is null, then defaults
+  /// to start padding of 72.0 pixels and bottom padding of 16.0 pixels.
   final EdgeInsetsGeometry? titlePadding;
 
   /// Defines how far the [title] is inset from either the widget's
@@ -161,10 +160,10 @@ class FlexibleSpaceBar extends StatefulWidget {
   ///
   /// {@macro flutter.material.FlexibleSpaceBar.titlePadding}
   ///
-  /// If [centerTitle] is false, then the title is aligned to the start of the
-  /// flexible space bar with the [expandedTitlePadding] applied. If
-  /// [expandedTitlePadding] is null, then defaults to start padding of 16.0
-  /// pixels and bottom padding of 16.0 pixels.
+  /// If [centerTitle] is false, then the title is aligned to the bottom-left
+  /// with [expandedTitlePadding] applied. If [expandedTitlePadding] is null,
+  /// then defaults to start padding of 16.0 pixels and bottom padding of 16.0
+  /// pixels.
   final EdgeInsetsGeometry? expandedTitlePadding;
 
   /// Defines how much the title is scaled when the FlexibleSpaceBar is expanded
@@ -355,7 +354,10 @@ class _FlexibleSpaceBarState extends State<FlexibleSpaceBar> {
             final EdgeInsetsGeometry padding = EdgeInsetsGeometryTween(
               begin:
                   widget.expandedTitlePadding ??
-                  const EdgeInsetsDirectional.only(start: 16, bottom: 16),
+                  EdgeInsetsDirectional.only(
+                    start: effectiveCenterTitle ? 0.0 : 16.0,
+                    bottom: 16.0,
+                  ),
               end:
                   widget.titlePadding ??
                   EdgeInsetsDirectional.only(

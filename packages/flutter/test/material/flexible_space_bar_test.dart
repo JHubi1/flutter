@@ -28,10 +28,7 @@ void main() {
     Size size = tester.getSize(title);
     expect(center.dx, lessThan(400.0 - size.width / 2.0));
 
-    for (final TargetPlatform platform in <TargetPlatform>[
-      TargetPlatform.iOS,
-      TargetPlatform.macOS,
-    ]) {
+    for (final platform in <TargetPlatform>[TargetPlatform.iOS, TargetPlatform.macOS]) {
       // Clear the widget tree to avoid animating between platforms.
       await tester.pumpWidget(Container(key: UniqueKey()));
 
@@ -54,12 +51,12 @@ void main() {
   testWidgets('Material3 - FlexibleSpaceBarSettings provides settings to a FlexibleSpaceBar', (
     WidgetTester tester,
   ) async {
-    const double minExtent = 100.0;
-    const double initExtent = 200.0;
-    const double maxExtent = 300.0;
-    const double alpha = 0.5;
+    const minExtent = 100.0;
+    const initExtent = 200.0;
+    const maxExtent = 300.0;
+    const alpha = 0.5;
 
-    final FlexibleSpaceBarSettings customSettings =
+    final customSettings =
         FlexibleSpaceBar.createSettings(
               currentExtent: initExtent,
               minExtent: minExtent,
@@ -75,7 +72,7 @@ void main() {
             )
             as FlexibleSpaceBarSettings;
 
-    const Key dragTarget = Key('orange box');
+    const dragTarget = Key('orange box');
 
     await tester.pumpWidget(
       MaterialApp(
@@ -109,7 +106,7 @@ void main() {
     expect(clipRect.size.height, maxExtent);
 
     final Element actionTextBox = tester.element(find.text('title'));
-    final Text textWidget = actionTextBox.widget as Text;
+    final textWidget = actionTextBox.widget as Text;
     final DefaultTextStyle defaultTextStyle = DefaultTextStyle.of(actionTextBox);
 
     final TextStyle effectiveStyle = defaultTextStyle.style.merge(textWidget.style);
@@ -125,12 +122,12 @@ void main() {
   testWidgets('Material2 - FlexibleSpaceBarSettings provides settings to a FlexibleSpaceBar', (
     WidgetTester tester,
   ) async {
-    const double minExtent = 100.0;
-    const double initExtent = 200.0;
-    const double maxExtent = 300.0;
-    const double alpha = 0.5;
+    const minExtent = 100.0;
+    const initExtent = 200.0;
+    const maxExtent = 300.0;
+    const alpha = 0.5;
 
-    final FlexibleSpaceBarSettings customSettings =
+    final customSettings =
         FlexibleSpaceBar.createSettings(
               currentExtent: initExtent,
               minExtent: minExtent,
@@ -146,7 +143,7 @@ void main() {
             )
             as FlexibleSpaceBarSettings;
 
-    const Key dragTarget = Key('orange box');
+    const dragTarget = Key('orange box');
 
     await tester.pumpWidget(
       MaterialApp(
@@ -181,7 +178,7 @@ void main() {
     expect(clipRect.size.height, maxExtent);
 
     final Element actionTextBox = tester.element(find.text('title'));
-    final Text textWidget = actionTextBox.widget as Text;
+    final textWidget = actionTextBox.widget as Text;
     final DefaultTextStyle defaultTextStyle = DefaultTextStyle.of(actionTextBox);
 
     final TextStyle effectiveStyle = defaultTextStyle.style.merge(textWidget.style);
@@ -233,7 +230,7 @@ void main() {
   testWidgets('Material3 - Collapsed FlexibleSpaceBar has correct semantics', (
     WidgetTester tester,
   ) async {
-    final SemanticsTester semantics = SemanticsTester(tester);
+    final semantics = SemanticsTester(tester);
     const double expandedHeight = 200;
     await tester.pumpWidget(
       MaterialApp(
@@ -258,7 +255,7 @@ void main() {
       ),
     );
 
-    TestSemantics expectedSemantics = TestSemantics.root(
+    var expectedSemantics = TestSemantics.root(
       children: <TestSemantics>[
         TestSemantics.rootChild(
           id: 1,
@@ -498,7 +495,7 @@ void main() {
   testWidgets('Material2 - Collapsed FlexibleSpaceBar has correct semantics', (
     WidgetTester tester,
   ) async {
-    final SemanticsTester semantics = SemanticsTester(tester);
+    final semantics = SemanticsTester(tester);
     const double expandedHeight = 200;
     await tester.pumpWidget(
       MaterialApp(
@@ -524,7 +521,7 @@ void main() {
       ),
     );
 
-    TestSemantics expectedSemantics = TestSemantics.root(
+    var expectedSemantics = TestSemantics.root(
       children: <TestSemantics>[
         TestSemantics.rootChild(
           id: 1,
@@ -765,8 +762,8 @@ void main() {
   testWidgets('Material3 - FlexibleSpaceBar sets width constraints for the title', (
     WidgetTester tester,
   ) async {
-    const double titleFontSize = 20.0;
-    const double height = 300.0;
+    const titleFontSize = 20.0;
+    const height = 300.0;
     late double width;
     await tester.pumpWidget(
       MaterialApp(
@@ -800,7 +797,7 @@ void main() {
       ),
     );
 
-    final double textWidth = width;
+    final textWidth = width;
     // The title is scaled and transformed to be 1.5 times bigger, when the
     // FlexibleSpaceBar is fully expanded, thus we expect the width to be
     // 1.5 times smaller than the full width. The height of the text is the same
@@ -818,8 +815,8 @@ void main() {
   testWidgets('Material2 - FlexibleSpaceBar sets width constraints for the title', (
     WidgetTester tester,
   ) async {
-    const double titleFontSize = 20.0;
-    const double height = 300.0;
+    const titleFontSize = 20.0;
+    const height = 300.0;
     late double width;
     await tester.pumpWidget(
       MaterialApp(
@@ -854,7 +851,7 @@ void main() {
       ),
     );
 
-    final double textWidth = width;
+    final textWidth = width;
     // The title is scaled and transformed to be 1.5 times bigger, when the
     // FlexibleSpaceBar is fully expanded, thus we expect the width to be
     // 1.5 times smaller than the full width. The height of the text is the same
@@ -871,9 +868,9 @@ void main() {
   testWidgets(
     'Material3 - FlexibleSpaceBar sets constraints for the title - override expandedTitleScale',
     (WidgetTester tester) async {
-      const double titleFontSize = 20.0;
-      const double height = 300.0;
-      const double expandedTitleScale = 3.0;
+      const titleFontSize = 20.0;
+      const height = 300.0;
+      const expandedTitleScale = 3.0;
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
@@ -923,7 +920,7 @@ void main() {
       // bottom edge.
       const double bottomMargin = titleFontSize * (expandedTitleScale - 1);
 
-      final double textWidth = collapsedWidth;
+      final textWidth = collapsedWidth;
       // The title is scaled and transformed to be 3 times bigger, when the
       // FlexibleSpaceBar is fully expanded, thus we expect the width to be
       // 3 times smaller than the full width. The height of the text is the same
@@ -941,9 +938,9 @@ void main() {
   testWidgets(
     'Material2 - FlexibleSpaceBar sets constraints for the title - override expandedTitleScale',
     (WidgetTester tester) async {
-      const double titleFontSize = 20.0;
-      const double height = 300.0;
-      const double expandedTitleScale = 3.0;
+      const titleFontSize = 20.0;
+      const height = 300.0;
+      const expandedTitleScale = 3.0;
       await tester.pumpWidget(
         MaterialApp(
           theme: ThemeData(useMaterial3: false),
@@ -994,7 +991,7 @@ void main() {
       // bottom edge.
       const double bottomMargin = titleFontSize * (expandedTitleScale - 1);
 
-      final double textWidth = collapsedWidth;
+      final textWidth = collapsedWidth;
       // The title is scaled and transformed to be 3 times bigger, when the
       // FlexibleSpaceBar is fully expanded, thus we expect the width to be
       // 3 times smaller than the full width. The height of the text is the same
@@ -1010,8 +1007,8 @@ void main() {
   );
 
   testWidgets('Material3 - FlexibleSpaceBar scaled title', (WidgetTester tester) async {
-    const double titleFontSize = 20.0;
-    const double height = 300.0;
+    const titleFontSize = 20.0;
+    const height = 300.0;
     await tester.pumpWidget(
       MaterialApp(
         home: Scaffold(
@@ -1064,8 +1061,8 @@ void main() {
   });
 
   testWidgets('Material2 - FlexibleSpaceBar scaled title', (WidgetTester tester) async {
-    const double titleFontSize = 20.0;
-    const double height = 300.0;
+    const titleFontSize = 20.0;
+    const height = 300.0;
     await tester.pumpWidget(
       MaterialApp(
         theme: ThemeData(useMaterial3: false),
@@ -1121,9 +1118,9 @@ void main() {
   testWidgets('Material3 - FlexibleSpaceBar scaled title - override expandedTitleScale', (
     WidgetTester tester,
   ) async {
-    const double titleFontSize = 20.0;
-    const double height = 300.0;
-    const double expandedTitleScale = 3.0;
+    const titleFontSize = 20.0;
+    const height = 300.0;
+    const expandedTitleScale = 3.0;
     await tester.pumpWidget(
       MaterialApp(
         home: Scaffold(
@@ -1180,9 +1177,9 @@ void main() {
   testWidgets('Material2 - FlexibleSpaceBar scaled title - override expandedTitleScale', (
     WidgetTester tester,
   ) async {
-    const double titleFontSize = 20.0;
-    const double height = 300.0;
-    const double expandedTitleScale = 3.0;
+    const titleFontSize = 20.0;
+    const height = 300.0;
+    const expandedTitleScale = 3.0;
     await tester.pumpWidget(
       MaterialApp(
         theme: ThemeData(useMaterial3: false),
@@ -1486,7 +1483,7 @@ void main() {
     );
 
     // We drag up to fully collapse the space bar.
-    for (int i = 0; i < 9; i++) {
+    for (var i = 0; i < 9; i++) {
       await tester.drag(find.byKey(SubCategoryScreenView.scrollKey), const Offset(0, -50.0));
       await tester.pumpAndSettle();
     }
@@ -1496,7 +1493,7 @@ void main() {
       isA<OpacityLayer>().having((OpacityLayer p0) => p0.alpha, 'alpha', lessThan(255)),
     );
 
-    for (int i = 0; i < 11; i++) {
+    for (var i = 0; i < 11; i++) {
       await tester.drag(find.byKey(SubCategoryScreenView.scrollKey), const Offset(0, -50.0));
       await tester.pumpAndSettle();
     }
@@ -1509,7 +1506,7 @@ void main() {
   testWidgets('FlexibleSpaceBarSettings.hasLeading provides a gap between leading and title', (
     WidgetTester tester,
   ) async {
-    final FlexibleSpaceBarSettings customSettings =
+    final customSettings =
         FlexibleSpaceBar.createSettings(
               currentExtent: 200.0,
               hasLeading: true,
@@ -1613,7 +1610,7 @@ void main() {
 
   // This is a regression test for https://github.com/flutter/flutter/issues/138296.
   testWidgets('Material3 - Default title color', (WidgetTester tester) async {
-    final ThemeData theme = ThemeData();
+    final theme = ThemeData();
     await tester.pumpWidget(
       MaterialApp(
         theme: theme, // Provide the expected theme data.

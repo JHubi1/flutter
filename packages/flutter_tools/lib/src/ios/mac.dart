@@ -10,11 +10,13 @@ import 'package:unified_analytics/unified_analytics.dart';
 
 import '../artifacts.dart';
 import '../base/file_system.dart';
+import '../base/fingerprint.dart';
 import '../base/io.dart';
 import '../base/logger.dart';
 import '../base/process.dart';
 import '../base/project_migrator.dart';
 import '../base/utils.dart';
+import '../base/version.dart';
 import '../build_info.dart';
 import '../cache.dart';
 import '../darwin/darwin.dart';
@@ -194,7 +196,7 @@ Future<XcodeBuildResult> buildXcodeProject({
     return XcodeBuildResult(success: false);
   }
 
-  await removeFinderExtendedAttributes(
+  await removeExtendedAttributes(
     app.project.parent.directory,
     globals.processUtils,
     globals.logger,
@@ -271,7 +273,7 @@ Future<XcodeBuildResult> buildXcodeProject({
     );
   }
 
-  Map<String, String>? autoSigningConfigs;
+  final String buildDirectoryPath = getIosBuildDirectory();
 
   final Map<String, String> buildSettings =
       await app.project.buildSettingsForBuildInfo(
@@ -281,6 +283,41 @@ Future<XcodeBuildResult> buildXcodeProject({
       ) ??
       <String, String>{};
 
+  final String? targetBuildDirPath = buildSettings['TARGET_BUILD_DIR'];
+  final Directory? targetBuildDir = targetBuildDirPath != null
+      ? globals.fs.directory(targetBuildDirPath)
+      : null;
+  final bool incrementalBuild = targetBuildDir != null && targetBuildDir.existsSync();
+
+  final buildCommands = <String>[
+    ...globals.xcode!.xcrunCommand(),
+    'xcodebuild',
+    '-configuration',
+    configuration,
+  ];
+
+  // Check the public headers before checking Xcode version so headers fingerprinter is created
+  // regardless of Xcode version.
+  final bool headersChanged = publicHeadersChanged(
+    environmentType: environmentType,
+    mode: buildInfo.mode,
+    buildDirectory: buildDirectoryPath,
+    artifacts: globals.artifacts,
+    fileSystem: globals.fs,
+    logger: globals.logger,
+  );
+  final Version? xcodeVersion = globals.xcode?.currentVersion;
+  if (headersChanged &&
+      incrementalBuild &&
+      (xcodeVersion != null && xcodeVersion >= Version(26, 0, 0))) {
+    // Xcode 26 changed the way headers are pre-compiled and will throw an error if the headers
+    // have changed since the last time they were compiled. To avoid this error, clean before
+    // building if headers have changed.
+    targetBuildDir.deleteSync(recursive: true);
+    buildCommands.addAll(<String>['clean', 'build']);
+  }
+
+  Map<String, String>? autoSigningConfigs;
   if (codesign && environmentType == EnvironmentType.physical) {
     autoSigningConfigs = await getCodeSigningIdentityDevelopmentTeamBuildSetting(
       buildSettings: buildSettings,
@@ -301,6 +338,12 @@ Future<XcodeBuildResult> buildXcodeProject({
     buildInfo: buildInfo,
   );
   if (app.project.usesSwiftPackageManager) {
+    SwiftPackageManager.updateFlutterFrameworkSymlink(
+      buildMode: buildInfo.mode,
+      fileSystem: globals.fs,
+      platform: FlutterDarwinPlatform.ios,
+      project: app.project,
+    );
     final String? iosDeploymentTarget = buildSettings['IPHONEOS_DEPLOYMENT_TARGET'];
     if (iosDeploymentTarget != null) {
       SwiftPackageManager.updateMinimumDeployment(
@@ -310,17 +353,10 @@ Future<XcodeBuildResult> buildXcodeProject({
       );
     }
   }
-  await processPodsIfNeeded(project.ios, getIosBuildDirectory(), buildInfo.mode);
+  await processPodsIfNeeded(project.ios, buildDirectoryPath, buildInfo.mode);
   if (configOnly) {
     return XcodeBuildResult(success: true);
   }
-
-  final buildCommands = <String>[
-    ...globals.xcode!.xcrunCommand(),
-    'xcodebuild',
-    '-configuration',
-    configuration,
-  ];
 
   if (globals.logger.isVerbose) {
     // An environment variable to be passed to xcode_backend.sh determining
@@ -351,7 +387,7 @@ Future<XcodeBuildResult> buildXcodeProject({
       scheme,
       if (buildAction !=
           XcodeBuildAction.archive) // dSYM files aren't copied to the archive if BUILD_DIR is set.
-        'BUILD_DIR=${globals.fs.path.absolute(getIosBuildDirectory())}',
+        'BUILD_DIR=${globals.fs.path.absolute(buildDirectoryPath)}',
     ]);
   }
 
@@ -628,23 +664,82 @@ Future<XcodeBuildResult> buildXcodeProject({
   }
 }
 
-/// Extended attributes applied by Finder can cause code signing errors. Remove them.
-/// https://developer.apple.com/library/archive/qa/qa1940/_index.html
-Future<void> removeFinderExtendedAttributes(
+/// Check if the Flutter framework's public headers have changed since last built.
+bool publicHeadersChanged({
+  required BuildMode mode,
+  required EnvironmentType environmentType,
+  required String buildDirectory,
+  required Artifacts? artifacts,
+  required FileSystem fileSystem,
+  required Logger logger,
+}) {
+  final String? basePath = artifacts?.getArtifactPath(
+    Artifact.flutterFramework,
+    platform: TargetPlatform.ios,
+    mode: mode,
+    environmentType: environmentType,
+  );
+  if (basePath == null) {
+    return false;
+  }
+  final Directory headersDirectory = fileSystem.directory(
+    fileSystem.path.join(basePath, 'Headers'),
+  );
+  if (!headersDirectory.existsSync()) {
+    return false;
+  }
+  final List<String> files = headersDirectory
+      .listSync()
+      .map<String>((FileSystemEntity header) => header.path)
+      .toList();
+
+  final String fingerprintPath = fileSystem.path.join(
+    buildDirectory,
+    'framework_public_headers.fingerprint',
+  );
+  final fingerprinter = Fingerprinter(
+    fingerprintPath: fingerprintPath,
+    paths: files,
+    fileSystem: fileSystem,
+    logger: logger,
+  );
+  final bool headersChanged = !fingerprinter.doesFingerprintMatch();
+  if (headersChanged) {
+    fingerprinter.writeFingerprint();
+  }
+  return headersChanged;
+}
+
+/// Extended attributes can cause code signing errors. Remove them.
+///
+/// Attributes like `com.apple.FinderInfo` and `com.apple.provenance` are added
+/// by Finder, cloud storage services (OneDrive, iCloud, Dropbox), or when files
+/// are downloaded. These must be removed before code signing.
+///
+/// See: https://developer.apple.com/library/archive/qa/qa1940/_index.html
+/// See: https://github.com/flutter/flutter/issues/180351
+Future<void> removeExtendedAttributes(
   FileSystemEntity projectDirectory,
   ProcessUtils processUtils,
   Logger logger,
 ) async {
-  final bool success = await processUtils.exitsHappy(<String>[
-    'xattr',
-    '-r',
-    '-d',
-    'com.apple.FinderInfo',
-    projectDirectory.path,
-  ]);
-  // Ignore all errors, for example if directory is missing.
-  if (!success) {
-    logger.printTrace('Failed to remove xattr com.apple.FinderInfo from ${projectDirectory.path}');
+  // Remove specific extended attributes that cause code signing failures.
+  // We remove com.apple.FinderInfo and com.apple.provenance, but preserve
+  // com.apple.xcode.CreatedByBuildSystem which Xcode uses to manage build directories.
+  const attributesToRemove = <String>{'com.apple.FinderInfo', 'com.apple.provenance'};
+
+  for (final attribute in attributesToRemove) {
+    final bool success = await processUtils.exitsHappy(<String>[
+      'xattr',
+      '-r',
+      '-d',
+      attribute,
+      projectDirectory.path,
+    ]);
+    // Ignore all errors, for example if directory is missing or attribute doesn't exist.
+    if (!success) {
+      logger.printTrace('Failed to remove $attribute from ${projectDirectory.path}');
+    }
   }
 }
 
@@ -918,6 +1013,12 @@ _XCResultIssueHandlingResult _handleXCResultIssue({
         missingModule: missingModule,
       );
     }
+  } else if (message.toLowerCase().contains('has been modified since')) {
+    return _XCResultIssueHandlingResult(
+      requiresProvisioningProfile: false,
+      hasProvisioningProfileIssue: false,
+      modifiedPrecompiledSource: true,
+    );
   }
   return _XCResultIssueHandlingResult(
     requiresProvisioningProfile: false,
@@ -937,6 +1038,7 @@ Future<bool> _handleIssues(
   var requiresProvisioningProfile = false;
   var hasProvisioningProfileIssue = false;
   var issueDetected = false;
+  var modifiedPrecompiledSource = false;
   String? missingPlatform;
   final duplicateModules = <String>[];
   final missingModules = <String>[];
@@ -962,6 +1064,7 @@ Future<bool> _handleIssues(
       if (handlingResult.missingModule != null) {
         missingModules.add(handlingResult.missingModule!);
       }
+      modifiedPrecompiledSource = handlingResult.modifiedPrecompiledSource;
       issueDetected = true;
     }
   } else if (xcResult != null) {
@@ -1003,10 +1106,7 @@ Future<bool> _handleIssues(
         'looking at your "ios/Podfile.lock" dependency tree and requesting the '
         'author add Swift Package Manager compatibility. See https://stackoverflow.com/a/27955017 '
         'to learn more about understanding Podlock dependency tree. \n\n'
-        'You can also disable Swift Package Manager for the project by adding the '
-        'following in the project\'s pubspec.yaml under the "flutter" section:\n'
-        '  config:'
-        '    enable-swift-package-manager: false\n',
+        '$kDisableSwiftPMInstructions',
       );
     }
   } else if (missingModules.isNotEmpty) {
@@ -1032,6 +1132,13 @@ Future<bool> _handleIssues(
         );
       }
     }
+  } else if (modifiedPrecompiledSource) {
+    logger.printError(
+      '════════════════════════════════════════════════════════════════════════════════\n'
+      'A precompiled file has been changed since last built. Please run "flutter clean" to clear '
+      'the cache.\n'
+      '════════════════════════════════════════════════════════════════════════════════',
+    );
   }
   return issueDetected;
 }
@@ -1169,6 +1276,7 @@ class _XCResultIssueHandlingResult {
     this.missingPlatform,
     this.duplicateModule,
     this.missingModule,
+    this.modifiedPrecompiledSource = false,
   });
 
   /// An issue indicates that user didn't provide the provisioning profile.
@@ -1186,6 +1294,10 @@ class _XCResultIssueHandlingResult {
   /// An issue indicates a module was imported but not found, potentially due
   /// to it being Swift Package Manager compatible only.
   final String? missingModule;
+
+  /// An issue indicates that a source file, such as a header in the Flutter framework, has
+  /// changed since last built. This requires "flutter clean" to resolve.
+  final bool modifiedPrecompiledSource;
 }
 
 const _kResultBundlePath = 'temporary_xcresult_bundle';

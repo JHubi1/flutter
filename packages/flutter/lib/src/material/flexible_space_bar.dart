@@ -128,8 +128,9 @@ class FlexibleSpaceBar extends StatefulWidget {
   /// This curve can be used to prevent the title from colliding with another
   /// widget, like [SliverAppBar.leading].
   ///
-  /// The `out` of the curve hereby is the collapsed state and the `in` is the
-  /// expanded state.
+  /// The curve is applied to the transition between the expanded and collapsed
+  /// states. A value of 0.0 corresponds to the expanded state, and 1.0
+  /// corresponds to the collapsed state.
   ///
   /// For example, using [Curves.easeOutSine] will allow the title to flee
   /// quickly to the collapsed position, making space for a leading widget.
@@ -350,25 +351,21 @@ class _FlexibleSpaceBarState extends State<FlexibleSpaceBar> {
             titleStyle = titleStyle.copyWith(color: titleStyle.color!.withOpacity(opacity));
             final bool effectiveCenterTitle = _getEffectiveCenterTitle(theme);
             final leadingPadding = (settings.hasLeading ?? true) ? 72.0 : 16.0;
-            final curveTween = CurveTween(curve: widget.titleCurve ?? Curves.linear);
-            final EdgeInsetsGeometry padding = EdgeInsetsGeometryTween(
-              begin:
-                  widget.expandedTitlePadding ??
+            final double curveValue = (widget.titleCurve ?? Curves.linear).transform(t);
+            final EdgeInsetsGeometry padding = EdgeInsetsGeometry.lerp(
+              widget.expandedTitlePadding ??
                   EdgeInsetsDirectional.only(
                     start: effectiveCenterTitle ? 0.0 : 16.0,
                     bottom: 16.0,
                   ),
-              end:
-                  widget.titlePadding ??
+              widget.titlePadding ??
                   EdgeInsetsDirectional.only(
                     start: effectiveCenterTitle ? 0.0 : leadingPadding,
                     bottom: 16.0,
                   ),
-            ).chain(curveTween).transform(t);
-            final double scaleValue = Tween<double>(
-              begin: widget.expandedTitleScale,
-              end: 1.0,
-            ).chain(curveTween).transform(t);
+              curveValue,
+            )!;
+            final double scaleValue = ui.lerpDouble(widget.expandedTitleScale, 1.0, curveValue)!;
             final scaleTransform = Matrix4.identity()
               ..scaleByDouble(scaleValue, scaleValue, 1.0, 1);
             final Alignment titleAlignment = _getTitleAlignment(effectiveCenterTitle);
